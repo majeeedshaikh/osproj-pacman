@@ -986,7 +986,7 @@ gameoversprite.setScale(0.9f,0.9f);
                 }
             }
         }
- scoreText.setPosition(500, 536);
+ scoreText.setPosition(490, 536);
         // Clear the window
         windowg.clear();
 
@@ -1015,7 +1015,7 @@ void* handleSpeedBoosterEffect(void* arg) {
         for (int i = 0; i < 4; i++) {
             pthread_mutex_lock(&ghosts[i].mutex);
 
-            if (speedBoosters.count({ghosts[i].x, ghosts[i].y}) && speedBoosters[{ghosts[i].x, ghosts[i].y}]) {
+            if ( !ghosts[i].isfast && !ghosts[i].isBlue && speedBoosters.count({ghosts[i].x, ghosts[i].y}) && speedBoosters[{ghosts[i].x, ghosts[i].y}]) {
                 if (ghosts[i].canbefast) {
                     // Ghost is allowed to be fast
                     ghosts[i].isfast = true;
@@ -1031,7 +1031,7 @@ void* handleSpeedBoosterEffect(void* arg) {
 
                     // Reset the ghost speed and post the semaphore
                   //  ghosts[i].isfast = false;
-                    sem_post(&speedBoosterSemaphore);
+                   // sem_post(&speedBoosterSemaphore);
                 } else {
                     // Ghost is not allowed to be fast
                     // Respawn the speed booster at a new location
@@ -1070,9 +1070,9 @@ int main() {
     pthread_mutex_init(&foodMutex, NULL);
     pthread_mutex_init(&uimutex, NULL);
     
-//ghosts[1].canbefast=1;
-    //ghosts[2].canbefast=1;
-   // ghosts[3].canbefast=1;
+ghosts[1].canbefast=1;
+  ghosts[2].canbefast=1;
+   ghosts[3].canbefast=1;
  //ghosts[4].canbefast=1;
 
  // Place PowerPellets in open areas of the maze
