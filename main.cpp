@@ -28,6 +28,8 @@ sem_t* secondSemaphore;
 sem_t powerpelletsfull,powerpelletsempty;
 
 bool gameend=0;
+bool gameover=0;
+int endscore=0;
 
 // Function to calculate Euclidean distance between two points
 double distance(int x1, int y1, int x2, int y2) {
@@ -206,7 +208,7 @@ std::vector<std::pair<int, int>> findPath(int startX, int startY, int endX, int 
 void* handlePowerPelletEffect(void* arg) {
     Player* player = static_cast<Player*>(arg);
 
-    while (true) {
+    while (!gameend) {
         usleep(10000);  // Check every 10 ms
 
         if (player->hasPowerPellet && !player->isUnderPowerPelletEffect) {
@@ -242,7 +244,7 @@ void* handlePowerPelletEffect(void* arg) {
 void* handlePlayerMovement(void* arg) {
     Player* player = static_cast<Player*>(arg);
 
-    while (true) {
+    while (!gameend) {
         usleep(100000);  // Sleep for 100 ms
         pthread_mutex_lock(&player->mutex);
 
@@ -264,6 +266,9 @@ pthread_mutex_lock(&uimutex);
             }
             if (sf::Keyboard::isKeyPressed(sf::Keyboard::X) ) {
                 gameend=1;
+            }
+             if (sf::Keyboard::isKeyPressed(sf::Keyboard::O) ) {
+                gameover=1;
             }
 pthread_mutex_unlock(&uimutex);
         pthread_mutex_lock(&foodMutex);
@@ -355,7 +360,7 @@ void* handleGhostMovement(void* arg) {
     Ghost* ghost = static_cast<Ghost*>(arg);
 
    // while (!ghost->isdead ) {
-     while (true ) {
+     while (!gameend ) {
     if(ghost->isfast==1){
         usleep(300000);  // Sleep for 400 ms
 }
@@ -509,8 +514,8 @@ sf::Sprite powerPelletSprite;
 sf::Sprite foodSprite;
 sf::Sprite wallSprite;
 sf::Sprite scoreSprite;
-
-
+sf::Font font;
+   sf::Text scoreText;
 
 void* uithreadfunction(void* arg)
 {
@@ -633,7 +638,7 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
 
         
         
-  sf::Font font;
+  
       if (!font.loadFromFile("gaming.ttf")) {
           std::cerr << "Error loading font" << std::endl;
           
@@ -650,14 +655,14 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
   }
 
 
-    sf::Text scoreText;
+ 
     scoreText.setFont(font);
     scoreText.setCharacterSize(30);
     scoreText.setFillColor(sf::Color::White);
     scoreText.setPosition(900, 120); // Positioning for score
     scoreText.setString( std::to_string(player.score));
     
-    
+    endscore=player.score;
 
 
 
@@ -802,7 +807,7 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
 
 
 }
-
+ window.close(); 
 
 return nullptr;
 }
@@ -812,66 +817,179 @@ return nullptr;
   
 void* gameenginethread(void* arg){
 
-pthread_mutex_lock(&uimutex);
+  pthread_mutex_lock(&uimutex);
 
 
 
-pacmanTexture.loadFromFile("pacman.png");
-ghostTexture.loadFromFile("ghost.png");
-powerPelletTexture.loadFromFile("4.png");
-ghostBlueTexture.loadFromFile("ghostblue.png");
-wallTexture.loadFromFile("wall.png");
-foodTexture.loadFromFile("5.png");
-scoreTexture.loadFromFile("scoretext1.png");
-speedtexture.loadFromFile("8.png");
-livestexture.loadFromFile("livestext.png");
-lives3.loadFromFile("3live.png"); 
- 
- 
- 
-pacmanSprite.setTexture(pacmanTexture);
-ghostSprite.setTexture(ghostTexture);
-powerPelletSprite.setTexture(powerPelletTexture);
-foodSprite.setTexture(foodTexture);
-wallSprite.setTexture(wallTexture);
-speedsprite.setTexture(speedtexture);
-livestext.setTexture(livestexture);
-lives.setTexture(lives3);
-scoreSprite.setTexture(scoreTexture);
+  pacmanTexture.loadFromFile("pacman.png");
+  ghostTexture.loadFromFile("ghost.png");
+  powerPelletTexture.loadFromFile("4.png");
+  ghostBlueTexture.loadFromFile("ghostblue.png");
+  wallTexture.loadFromFile("wall.png");
+  foodTexture.loadFromFile("5.png");
+  scoreTexture.loadFromFile("scoretext1.png");
+  speedtexture.loadFromFile("8.png");
+  livestexture.loadFromFile("livestext.png");
+  lives3.loadFromFile("3live.png"); 
+   
+   
+   
+  pacmanSprite.setTexture(pacmanTexture);
+  ghostSprite.setTexture(ghostTexture);
+  powerPelletSprite.setTexture(powerPelletTexture);
+  foodSprite.setTexture(foodTexture);
+  wallSprite.setTexture(wallTexture);
+  speedsprite.setTexture(speedtexture);
+  livestext.setTexture(livestexture);
+  lives.setTexture(lives3);
+  scoreSprite.setTexture(scoreTexture);
 
 
 
-pacmanSprite.setScale(0.035f, 0.035f);
-ghostSprite.setScale(0.08f, 0.08f);
-powerPelletSprite.setScale(0.09f, 0.09f);
-foodSprite.setScale(0.04f, 0.04f);
-wallSprite.setScale(0.095f, 0.095f);
-speedsprite.setScale(0.06f,0.06f);
+  pacmanSprite.setScale(0.035f, 0.035f);
+  ghostSprite.setScale(0.08f, 0.08f);
+  powerPelletSprite.setScale(0.09f, 0.09f);
+  foodSprite.setScale(0.04f, 0.04f);
+  wallSprite.setScale(0.095f, 0.095f);
+  speedsprite.setScale(0.06f,0.06f);
 
-livestext.setScale(0.11f, 0.11f); // Adjust the scale to fit the maze cell
-livestext.setPosition(850, 300); 
+  livestext.setScale(0.11f, 0.11f); // Adjust the scale to fit the maze cell
+  livestext.setPosition(850, 300); 
 
-lives.setScale(0.12f, 0.12f); // Adjust the scale to fit the maze cell
-lives.setPosition(830, 380); 
-  
-scoreSprite.setScale(0.1f, 0.1f); // Adjust the scale to fit the maze cell
-scoreSprite.setPosition(850, 60); // Positioning for score
+  lives.setScale(0.12f, 0.12f); // Adjust the scale to fit the maze cell
+  lives.setPosition(830, 380); 
+    
+  scoreSprite.setScale(0.1f, 0.1f); // Adjust the scale to fit the maze cell
+  scoreSprite.setPosition(850, 60); // Positioning for score
 
-pthread_mutex_unlock(&uimutex);
+  pthread_mutex_unlock(&uimutex);
 
   while(!gameend){
 
 
+  }
+
+return NULL;
+
+}
+
+  void* startmenufunction(void* arg){
+  pthread_mutex_lock(&uimutex);
+  
+  // Create the SFML window
+    sf::RenderWindow windows(sf::VideoMode(1050, 1000), "SFML Window");
+
+    // Load the start screen texture
+    sf::Texture startScreenTexture;
+    if (!startScreenTexture.loadFromFile("startscreen.png")) {
+        std::cerr << "Error loading start screen texture." << std::endl;
+       
+    }
+
+    // Create the sprite for the start screen
+    sf::Sprite startScreenSprite(startScreenTexture);
+startScreenSprite.setScale(0.9f,0.9f);
+    while (windows.isOpen()) {
+        // Handle events
+        sf::Event events;
+        while (windows.pollEvent(events)) {
+            if (events.type == sf::Event::Closed) {
+                windows.close();
+            }
+            if (events.type == sf::Event::KeyPressed) {
+                if (events.key.code == sf::Keyboard::P) {
+                    windows.close();
+                }
+            }
+        }
+
+        // Clear the window
+        windows.clear();
+
+        // Display the start screen
+        windows.draw(startScreenSprite);
+
+        // Display everything
+        windows.display();
+    }
+
+
+
+    pthread_mutex_unlock(&uimutex);
+  
+  
+  
+  
+  
+  
+  
+  
+  
+  
+    return nullptr;
+  
+  }
+  
+  
+  void* endmenufunction(void* arg){
+  
+    
+   pthread_mutex_lock(&uimutex);
+
+
+    sf::RenderWindow windowg(sf::VideoMode(1050, 1000), "SFML Wiindow");
+
+    // Load the start screen texture
+    sf::Texture gameovertexture;
+    if (!gameovertexture.loadFromFile("gameoverscreen.png")) {
+        std::cerr << "Error loading start screen texture." << std::endl;
+        
+    }
+
+    // Create the sprite for the start screen
+    sf::Sprite gameoversprite(gameovertexture);
+gameoversprite.setScale(0.9f,0.9f);
+  // Positioning for score
+    scoreText.setString( std::to_string(endscore));
+    while (windowg.isOpen()) {
+        // Handle events
+        sf::Event eventg;
+        while (windowg.pollEvent(eventg)) {
+            if (eventg.type == sf::Event::Closed) {
+                windowg.close();
+            }
+            if (eventg.type == sf::Event::KeyPressed) {
+                if (eventg.key.code == sf::Keyboard::O) {
+                gameover=1;
+                    windowg.close();
+                }
+            }
+        }
+ scoreText.setPosition(500, 536);
+        // Clear the window
+        windowg.clear();
+
+        // Display the start screen
+        windowg.draw(gameoversprite);
+windowg.draw(scoreText);
+        // Display everything
+        windowg.display();
+    }
+
+
+
+     pthread_mutex_unlock(&uimutex);
+  
+  
+  
+  
+  return nullptr;
   }
   
   
   
   
   
-return NULL;
-
-}
-
   
 int main() {
 
@@ -880,7 +998,9 @@ int main() {
         std::cerr << "Error initializing semaphores." << std::endl;
         return 1;
     }
-    
+        
+   // MUTEXS INTIALIZATION
+   
     pthread_mutex_init(&player.mutex, NULL);
     pthread_mutex_init(&speedBoostersMutex, NULL);
     pthread_mutex_init(&powerPelletsMutex, NULL);
@@ -888,36 +1008,24 @@ int main() {
     pthread_mutex_init(&uimutex, NULL);
     
 
-ghosts[2].canbefast=1;
-ghosts[3].canbefast=1;
-
-//ghosts[4].isfast=1;
+    ghosts[2].canbefast=1;
+    ghosts[3].canbefast=1;
 
 
-      // right bottom design
-      //sf:: Texture design;
-        //design.loadFromFile("design.png");
-
-    //  sf:: Sprite bottomdesign(design);
-      //  bottomdesign.setPosition(650,400);
-       // bottomdesign.setScale(0.45f,0.45f);  
-
-    
-    
-   // MUTEXS INTIALIZATION
-   
-
- // Place food in open areas of the maze
+ // Place PowerPellets in open areas of the maze
 
     powerPellets[{18, 1}] = true;
     powerPellets[{2, 20}] = true;
     powerPellets[{18, 20}] = true;
     powerPellets[{10, 10}] = true;
 
+ // Place SpeedBoosters in open areas of the maze
     speedBoosters[{5, 10}] = true;
     speedBoosters[{15, 15}] = true;
     
-    for (int y = 1; y < MAZE_HEIGHT - 1; ++y) {
+   
+ // Place food in open areas of the maze 
+   for (int y = 1; y < MAZE_HEIGHT - 1; ++y) {
         for (int x =1; x< MAZE_WIDTH - 1; ++x) {
         
             if (maze[y][x] == 0) {
@@ -928,14 +1036,18 @@ ghosts[3].canbefast=1;
     }
 
   
-    pthread_t playerThread, ghostThreads[8],powerPelletEffectThread,uithread,gameengine;
+    pthread_t playerThread,         ghostThreads[8],powerPelletEffectThread,uithread,gameengine,startmenuthread,endmenuthread;
+
+
+    pthread_create(&startmenuthread, NULL, startmenufunction, NULL);
 
     pthread_create(&playerThread, NULL, handlePlayerMovement, &player);
     pthread_create(&powerPelletEffectThread, NULL, handlePowerPelletEffect, &player);
-    pthread_create(&gameengine,NULL,gameenginethread, NULL);
-     pthread_create(&uithread, NULL, uithreadfunction, NULL);
     
-   int ghostNumbers[4] = {0, 1, 2, 3}; // Ghost indices
+    pthread_create(&gameengine,NULL,gameenginethread, NULL);
+    pthread_create(&uithread, NULL, uithreadfunction, NULL);
+    
+   int ghostNumbers[4] = {0, 1, 2, 3}; 
    
     for (int i = 0; i < 4; i++) {
     
@@ -944,289 +1056,30 @@ ghosts[3].canbefast=1;
         pthread_create(&ghostThreads[i*2+1], NULL, handleGhostMovement, &ghosts[i]);
         
     }
+    
     while(!gameend){
-    
-    
-    
+     
+     
+     
     }
-   /* 
 
-sf::Color color(18, 2, 43);
-
-    while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) window.close();
-        }
-
-        window.clear( color);
-
-
-// Draw the maze with walls using the wall sprite
-for (int y = 0; y < MAZE_HEIGHT; ++y) {
-    for (int x = 0; x < MAZE_WIDTH; ++x) {
-        if (maze[y][x] == 1) { // Wall
-            // Set the sprite's position to the current maze cell
-            wallSprite.setPosition(x * 40 + 15 , y * 40 + 15); // Adjust coordinates to match cell size
-            // Draw the wall sprite
-            window.draw(wallSprite);
-        } else { // Path
-            // Draw a black rectangle for pathways
-            sf::RectangleShape pathRect(sf::Vector2f(40, 40));
-            pathRect.setPosition(x * 40, y * 40);
-            pathRect.setFillColor(color);
-            window.draw(pathRect);
-        }
-    }
-}
-
-        // Draw food with proper synchronization
-        
-            //std::lock_guard<std::mutex> foodLock(foodMutex);
-             pthread_mutex_lock(&foodMutex);
-            for (const auto& food: foodLocations) {
-                if (food.second) {
-                
-                
-
-        foodSprite.setPosition(food.first.first  * 40 + 15 ,  food.first.second * 40 + 15); // Adjust coordinates to match cell size
-            // Draw the wall sprite
-            window.draw(foodSprite);
-                    
-                    
-                    
-                    //window.draw(foodShape);
-                }
-            }
-             pthread_mutex_unlock(&foodMutex);
-        
-// Draw power pellets
-        pthread_mutex_lock(&powerPelletsMutex);
-        for (const auto& pellet : powerPellets) {
-            if (pellet.second) {
-                powerPelletSprite.setPosition(pellet.first.first * 40 + 10, pellet.first.second * 40 + 10);  // Positioning
-                window.draw(powerPelletSprite);
-            }
-        }
-        pthread_mutex_unlock(&powerPelletsMutex);
-
-
-
-        pthread_mutex_lock(&speedBoostersMutex);
-        for (const auto& booster : speedBoosters) {
-            if (booster.second) {
-                speedsprite.setPosition(booster.first.first * 40 + 10, booster.first.second * 40 + 10); // Adjust position
-                window.draw(speedsprite);
-            }
-        }
-        pthread_mutex_unlock(&speedBoostersMutex);
-
-
-
-        // Lock and unlock mutexes using pthread_mutex_lock and pthread_mutex_unlock
-        pthread_mutex_lock(&player.mutex);
-        pacmanSprite.setPosition(player.x * 40, player.y * 40);
-        pthread_mutex_unlock(&player.mutex);
-        window.draw(pacmanSprite);
-
-      
-          for (int i = 0; i < 4; i++) {
-            pthread_mutex_lock(&ghosts[i].mutex);
-            
-            if (ghosts[i].isOutOfGhostHouse) {
-                if (ghosts[i].isBlue && ghosts[i].isdead==0) {
-                
-                    ghostSprite = sf::Sprite(ghostBlueTexture);  // Change to blue sprite
-                    ghostSprite.setScale(0.02f, 0.02f);
-                
-                } 
-                else {
-                
-                    ghostSprite = sf::Sprite(ghostTexture);  // Normal sprite
-                    ghostSprite.setScale(0.08f, 0.08f);
-                    
-                }
-                
-                ghostSprite.setPosition(ghosts[i].x * 40, ghosts[i].y * 40);
-                window.draw(ghostSprite);
-            }
-            
-            pthread_mutex_unlock(&ghosts[i].mutex);
-        }
-
-        
-        
-  sf::Font font;
-      if (!font.loadFromFile("gaming.ttf")) {
-          std::cerr << "Error loading font" << std::endl;
-          
-      }
-
-
-
+   pthread_create(&endmenuthread, NULL, endmenufunction, NULL);
   
-  if(player.lives==2){
-  lives3.loadFromFile("2live.png");
-  }
-   if(player.lives==1){
-  lives3.loadFromFile("1live.png");
-  }
-
-
-    sf::Text scoreText;
-    scoreText.setFont(font);
-    scoreText.setCharacterSize(30);
-    scoreText.setFillColor(sf::Color::White);
-    scoreText.setPosition(900, 120); // Positioning for score
-    scoreText.setString( std::to_string(player.score));
-    
-    
-
-
-
- pthread_mutex_lock(&uimutex);
- 
- window.draw(livestext);
-  window.draw(lives);
-  window.draw(scoreSprite);
-  window.draw(bottomdesign);
-  window.draw(scoreText);
+   while(!gameover){
      
-pthread_mutex_unlock(&uimutex);
-         // synchronization phase 1: Check for collisions and handle respawning if necessary
-        
-                        pthread_mutex_lock(&player.mutex);
-                    
-                        checkGhostSpeedBoosterCollision();  
-                        
-  bool collision = false;
-  int countercoll=0;
-
-    for (int i = 0; i < 4; ++i) {
-        pthread_mutex_lock(&ghosts[i].mutex); // Lock the ghost mutex to access its position
-
-            if (ghosts[i].x == player.x && ghosts[i].y == player.y) 
-              {
-                      collision = true; // Set collision flag if player collides with any ghost
-              }
-        pthread_mutex_unlock(&ghosts[i].mutex); // Unlock the ghost mutex after accessing its position
-    }
-
-                             
-  bool blueghostcollision=0;
-  int ghostcollided=5;
-     for (int i = 0; i < 4; i++) 
-     {
-                        pthread_mutex_lock(&ghosts[i].mutex);
-                    
-                  if( ghosts[i].isBlue==1 && ghosts[i].x == player.x && ghosts[i].y == player.y )
-                  {
-                      ghostcollided=i;
-                        blueghostcollision=1;
-                  }
      
-                        pthread_mutex_unlock(&ghosts[i].mutex);
-      }
-
-  if (collision && !blueghostcollision) 
-              {
- 
-              
-            player.lives--;
-
-      if (player.lives > 0) 
-              {
-                    // Reset player and ghost positions with proper synchronization
-                    player.x = 1;
-                    player.y = 1;
-
-               
-
-                  for (int i = 0; i < 4; i++) 
-                  {
-                        pthread_mutex_lock(&ghosts[i].mutex);
-                        if(!ghosts[i].isdead){
-                      //   cout<<"collison done seeting bools"<<endl;
-                              ghosts[i].isOutOfGhostHouse=false;
-                              ghosts[i].x = ghosts[i].initialX;
-                              ghosts[i].y = ghosts[i].initialY;
-                              ghosts[i].isfast=0;
-                              ghosts[i].semaphoresout=false;
-                                }
-                        pthread_mutex_unlock(&ghosts[i].mutex);
-                    }
-
-
-                  // Clear the ghost positions map
-                  pthread_mutex_lock(&ghostPositionsMutex);
-                      ghostPositions.clear(); 
-                  pthread_mutex_unlock(&ghostPositionsMutex);
-                  
-
-                    // Reallocate all food
-                  pthread_mutex_lock(&foodMutex);
-                  for (auto& food : foodLocations) 
-                    {
-                        food.second = true;
-                    }
-                  pthread_mutex_unlock(&foodMutex);
-              
-              
-                // Reallocate all speed bosters
-                  pthread_mutex_lock(&speedBoostersMutex);
-                  for ( auto& booster : speedBoosters) 
-                  {
-                     booster.second=true;
-                  }
-                  pthread_mutex_unlock(&speedBoostersMutex);
-                            
-        
-                } 
-        else {
-                      gameend=1;
-                      window.close(); // Close the game if all lives are lost
-             }
-                
-                
-            }
-      
- else if(collision && blueghostcollision)
-            {
-           
-                        pthread_mutex_lock(&ghosts[ghostcollided].mutex);
-                                        ghosts[ghostcollided].isOutOfGhostHouse=false;
-                                        ghosts[ghostcollided].x = ghosts[ghostcollided].initialX;
-                                        ghosts[ghostcollided].y = ghosts[ghostcollided].initialY;
-                                        ghosts[ghostcollided].isfast=0;
-                                        ghosts[ghostcollided].semaphoresout=false;
-                        pthread_mutex_unlock(&ghosts[ghostcollided].mutex);
-           
-           
-            pthread_mutex_lock(&ghostPositionsMutex);
-                      ghostPositions.clear(); // Clear the ghost positions map
-            pthread_mutex_unlock(&ghostPositionsMutex);
-           
-           }
-            
-             pthread_mutex_unlock(&player.mutex);
-        
-    
-    
-        window.display();
+     
     }
-
-
-
-*/
-cout<<"main herrr"<<endl;
+ 
     // Clean up
     for (int i = 0; i < 4; i++) {
-      //  pthread_mutex_destroy(&ghosts[i].mutex);
+        pthread_mutex_destroy(&ghosts[i].mutex);
     }
-  // pthread_mutex_destroy(&player.mutex);
- //  pthread_mutex_destroy(&powerPelletsMutex);
- //  pthread_mutex_destroy(&foodMutex);
- //  pthread_mutex_destroy(&uimutex);
+    
+   pthread_mutex_destroy(&player.mutex);
+   pthread_mutex_destroy(&powerPelletsMutex);
+   pthread_mutex_destroy(&foodMutex);
+   pthread_mutex_destroy(&uimutex);
     return 0;
     
 }
