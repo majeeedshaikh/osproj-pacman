@@ -24,13 +24,14 @@ sem_t permitSemaphore; // Controls access to the permit
 
 sem_t* firstSemaphore;
 sem_t* secondSemaphore;
+    sem_t speedBoosterSemaphore;
     
 sem_t powerpelletsfull,powerpelletsempty;
 
 bool gameend=0;
 bool gameover=0;
 int endscore=0;
-
+int startgamebool=0;
 // Function to calculate Euclidean distance between two points
 double distance(int x1, int y1, int x2, int y2) {
     return std::hypot(x2 - x1, y2 - y1);
@@ -65,7 +66,7 @@ struct Player {
     int x;
     int y;
     int score = 0;
-    int lives = 4;
+    int lives = 3;
     bool hasPowerPellet = false;
      bool isUnderPowerPelletEffect = false; 
     pthread_mutex_t mutex;
@@ -135,9 +136,8 @@ void respawnPowerPellet() {
 
 
 
-// Function to respawn a power pellet at a random location
 void respawnspeedbooster() {
-    // Choose a random location for the new power pellet
+    // Choose a random location for the new speed booster
     int newX = rand() % MAZE_WIDTH;
     int newY = rand() % MAZE_HEIGHT;
 
@@ -147,14 +147,38 @@ void respawnspeedbooster() {
         newY = rand() % MAZE_HEIGHT;
     }
 
-    // Lock the power pellet mutex before updating the power pellets map
+    // Lock the speed booster mutex before updating the speed boosters map
     pthread_mutex_lock(&speedBoostersMutex);
-    speedBoosters[{newX, newY}] = true; // Respawn the power pellet
+    speedBoosters[{newX, newY}] = true; // Respawn the speed booster
     pthread_mutex_unlock(&speedBoostersMutex);
 }
 
+void respawnSpeedBoostersAfterRestart() {
+    int numBoostersToSpawn = 2;  // Change this value if you want a different number of boosters
 
+    // Lock the speed booster mutex before updating the speed boosters map
+    pthread_mutex_lock(&speedBoostersMutex);
 
+    // Clear the existing speed boosters
+    speedBoosters.clear();
+
+    // Spawn the required number of speed boosters
+    while (numBoostersToSpawn > 0) {
+        int newX = rand() % MAZE_WIDTH;
+        int newY = rand() % MAZE_HEIGHT;
+
+        // Ensure the chosen location is in an open area of the maze
+        while (maze[newY][newX] != 0) {
+            newX = rand() % MAZE_WIDTH;
+            newY = rand() % MAZE_HEIGHT;
+        }
+
+        speedBoosters[{newX, newY}] = true;
+        numBoostersToSpawn--;
+    }
+
+    pthread_mutex_unlock(&speedBoostersMutex);
+}
 // BFS pathfinding to find the path
 std::vector<std::pair<int, int>> findPath(int startX, int startY, int endX, int endY, bool findShortest) {
     std::queue<std::pair<int, int>> queue;
@@ -528,7 +552,7 @@ pthread_mutex_unlock(&uimutex);
 while(!gameend){
 
 
-cout<<"inhereee"<<endl;
+//cout<<"inhereee"<<endl;
 
 
 
@@ -679,7 +703,7 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
         
                         pthread_mutex_lock(&player.mutex);
                     
-                        checkGhostSpeedBoosterCollision();  
+                      //  checkGhostSpeedBoosterCollision();  
                         
   bool collision = false;
   int countercoll=0;
@@ -734,6 +758,7 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
                               ghosts[i].y = ghosts[i].initialY;
                               ghosts[i].isfast=0;
                               ghosts[i].semaphoresout=false;
+                               sem_post(&speedBoosterSemaphore);
                                 }
                         pthread_mutex_unlock(&ghosts[i].mutex);
                     }
@@ -753,7 +778,7 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
                     }
                   pthread_mutex_unlock(&foodMutex);
               
-              
+              /*
                 // Reallocate all speed bosters
                   pthread_mutex_lock(&speedBoostersMutex);
                   for ( auto& booster : speedBoosters) 
@@ -761,7 +786,8 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
                      booster.second=true;
                   }
                   pthread_mutex_unlock(&speedBoostersMutex);
-                            
+                        */
+                        respawnSpeedBoostersAfterRestart();
         
                 } 
         else {
@@ -781,8 +807,9 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
                                         ghosts[ghostcollided].y = ghosts[ghostcollided].initialY;
                                         ghosts[ghostcollided].isfast=0;
                                         ghosts[ghostcollided].semaphoresout=false;
+                                         sem_post(&speedBoosterSemaphore);
                         pthread_mutex_unlock(&ghosts[ghostcollided].mutex);
-           
+           respawnSpeedBoostersAfterRestart();
            
             pthread_mutex_lock(&ghostPositionsMutex);
                       ghostPositions.clear(); // Clear the ghost positions map
@@ -800,7 +827,7 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
          window.close(); 
         }
     }
-      cout<<"coming herr"<<endl;
+     // cout<<"coming herr"<<endl;
 
 
 }
@@ -896,6 +923,8 @@ startScreenSprite.setScale(0.9f,0.9f);
             }
             if (events.type == sf::Event::KeyPressed) {
                 if (events.key.code == sf::Keyboard::P) {
+                startgamebool=1;
+                
                     windows.close();
                 }
             }
@@ -914,12 +943,6 @@ startScreenSprite.setScale(0.9f,0.9f);
 
 
     pthread_mutex_unlock(&uimutex);
-  
-  
-  
-  
-  
-  
   
   
   
@@ -985,9 +1008,44 @@ windowg.draw(scoreText);
   }
   
   
-  
-  
-  
+void* handleSpeedBoosterEffect(void* arg) {
+    while (!gameend) {
+        usleep(10000);  // Check every 10 ms
+
+        for (int i = 0; i < 4; i++) {
+            pthread_mutex_lock(&ghosts[i].mutex);
+
+            if (speedBoosters.count({ghosts[i].x, ghosts[i].y}) && speedBoosters[{ghosts[i].x, ghosts[i].y}]) {
+                if (ghosts[i].canbefast) {
+                    // Ghost is allowed to be fast
+                    ghosts[i].isfast = true;
+
+                    // Wait on the semaphore to ensure only one ghost is fast at a time
+                    sem_wait(&speedBoosterSemaphore);
+
+                    // Reset the speed booster location
+                    speedBoosters[{ghosts[i].x, ghosts[i].y}] = false;
+
+                    // Sleep for a certain duration (e.g., 600 ms)
+                   // usleep(600000);
+
+                    // Reset the ghost speed and post the semaphore
+                  //  ghosts[i].isfast = false;
+                    sem_post(&speedBoosterSemaphore);
+                } else {
+                    // Ghost is not allowed to be fast
+                    // Respawn the speed booster at a new location
+                    speedBoosters[{ghosts[i].x, ghosts[i].y}] = false;
+                    respawnspeedbooster();
+                }
+            }
+
+            pthread_mutex_unlock(&ghosts[i].mutex);
+        }
+    }
+
+    return nullptr;
+}
   
 int main() {
 
@@ -996,6 +1054,13 @@ int main() {
         std::cerr << "Error initializing semaphores." << std::endl;
         return 1;
     }
+        if (sem_init(&speedBoosterSemaphore, 0, 1) != 0) {
+    std::cerr << "Error initializing speed booster semaphore." << std::endl;
+    return 1;
+}
+        
+
+        
         
    // MUTEXS INTIALIZATION
    
@@ -1005,10 +1070,10 @@ int main() {
     pthread_mutex_init(&foodMutex, NULL);
     pthread_mutex_init(&uimutex, NULL);
     
-
-    ghosts[2].canbefast=1;
-    ghosts[3].canbefast=1;
-
+//ghosts[1].canbefast=1;
+    //ghosts[2].canbefast=1;
+   // ghosts[3].canbefast=1;
+ //ghosts[4].canbefast=1;
 
  // Place PowerPellets in open areas of the maze
 
@@ -1034,11 +1099,18 @@ int main() {
     }
 
   
-    pthread_t playerThread,         ghostThreads[8],powerPelletEffectThread,uithread,gameengine,startmenuthread,endmenuthread;
+    pthread_t playerThread,             ghostThreads[8],powerPelletEffectThread,uithread,gameengine,startmenuthread,endmenuthread,speedBoosterEffectThread;
 
 
+    
     pthread_create(&startmenuthread, NULL, startmenufunction, NULL);
-
+    
+    while(!startgamebool){
+    
+    
+    }
+    
+    pthread_create(&speedBoosterEffectThread, NULL, handleSpeedBoosterEffect, NULL); 
     pthread_create(&playerThread, NULL, handlePlayerMovement, &player);
     pthread_create(&powerPelletEffectThread, NULL, handlePowerPelletEffect, &player);
     
@@ -1067,7 +1139,7 @@ int main() {
      
      
      
-    }
+  }
  
     // Clean up
     for (int i = 0; i < 4; i++) {
