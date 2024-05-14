@@ -792,22 +792,20 @@ for (int y = 0; y < MAZE_HEIGHT; ++y) {
             
              pthread_mutex_unlock(&player.mutex);
         
-    
+  
     
         window.display();
         //pthread_mutex_unlock(&uimutex);
+        if(gameend==1){
+         window.close(); 
+        }
     }
-     gameend=1;
-
-
-
-     
-
-
+      cout<<"coming herr"<<endl;
 
 
 }
- window.close(); 
+
+
 
 return nullptr;
 }
